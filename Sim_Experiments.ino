@@ -34,6 +34,9 @@ void loop() {
 
   // If statement using millis to store the old position and tune it.
 
+  if(degrees > 30 || degrees < -30){
+    vOut = 0;
+  }
 
   float position = analogRead(SENSE_1);
 
