@@ -9,71 +9,83 @@ int SENSE_1 = 22;  // Ball sensor read pin
 unsigned long lastSerialTime = 0;
 const unsigned long serialInterval = 100;
 bool motorOn = false;
-unsigned long motorStartTime = 0;
-int beamEnd = 985;
-int beamStart = 82;
 float desiredPosition = 0;
-int vOut = 255;
 float storedPosition = 0;
 unsigned long positionTimer = 0;
-
+float kP = 0.01;
+float kD = -0.007;
+float kDD = -0.09;
+float vp = 0;
+float vd = 0;
+float vdd = 0;
+float vOut = 0;
 
 void setup()
 {
   Serial.begin(9600);
   // Initialising Pins  and Interrupts
   pinSetup();
-  // motorBackwards(100);
 }
 
 // Test comment
 
 void loop()
 {
-
-// Block to periodically store the position for delay between updates.
-  
-
-  // If statement using millis to store the old position and tune it.
-
   float position = analogRead(SENSE_1);
 
-  float mappedPos = map(position, 64, 981, -825, 825);
+  float mappedPos = map(position, 90, 970, -825, 825);
 
-  // float degrees = map(count, 0, 540, 0, 360);
+  float degrees = map(count, 0, 540, 0, 360);
 
-
-  // Serial.println(degrees);
-
-
-  // if(degrees >= 5 || degrees <= -5) {
-  //   motorOff();
-  // }
-
-
-  // Currently gives us a value between -8.18 and +8.18
-  float vp = (desiredPosition - mappedPos)*0.01 ;
-  
-  Serial.println(vp);
-
-  // Controlling the directions, the magnitudes come fron the map function
-  if(vp < 0) {
-    motorBackwards(map(vp, 0, -8.1, 0, 150));
-  } 
-
-  if(vp > 0) {
-    motorForwards(map(vp, 0, 8.1, 0, 150));
-  }
-  
-  // float vd = vdVar * kD;
-  // float vdd = degrees * kDD;
-
-  // float vOut = vp + vd + vdd;
-
-  if(millis() - positionTimer >= 10) {
+  if(millis() - positionTimer >= 5) {
     positionTimer = millis();
     storedPosition = mappedPos;
   }
+
+  if(abs(storedPosition - mappedPos) > 700) {
+    mappedPos = storedPosition;
+  }
+
+
+  // Controllers
+  vp = (desiredPosition - mappedPos)*kP;
+  vd = (desiredPosition - storedPosition)*kD;
+  vdd = degrees * kDD;
+  vOut = vp + vd + vdd;
+
+  Serial.print(position);
+  Serial.print("     ");
+  Serial.print(degrees);
+  Serial.print("     ");
+  Serial.print(vp);
+  Serial.print("     ");
+  Serial.print(vd);
+  Serial.print("     ");
+  Serial.print(vdd);
+  Serial.print("     ");
+  Serial.print(vOut);
+  Serial.println("");
+
+
+
+// Controlling the direction
+  if(vOut < 0) {
+    motorBackwards(map(vOut, 0, -4, 100, 255));
+  } 
+
+  if(vOut > 0) {
+    motorForwards(map(vOut, 0, 4, 100, 255));
+  }
+
+
+
+  // Jump tolerance if statement
+
+
+    if(degrees >= 30 || degrees <= -30) {
+    motorOff();
+  }
+
 
 }
 
@@ -139,9 +151,7 @@ void motorOff()
 
 // Function to turn the motor clockwise
 void motorForwards(int voltage)
-{
-  Serial.println("FORWARDS");
-  
+{ 
   digitalWrite(8, LOW);
   digitalWrite(9, HIGH);
   analogWrite(ENA, voltage);
@@ -151,8 +161,6 @@ void motorForwards(int voltage)
 // Function to turn the motor anti-clockwise
 void motorBackwards(int voltage)
 {
-  Serial.println("BACKWARDS");
-  
   digitalWrite(8, HIGH);
   digitalWrite(9, LOW);
   analogWrite(ENA, voltage);
