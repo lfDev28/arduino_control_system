@@ -10,7 +10,7 @@ float desiredPosition = 0;
 float storedPosition = 0;
 unsigned long positionTimer = 0;
 unsigned long controlTimer = 0;
-float kP = 0.0077;
+float kP = 0.0077; 
 float kD = -0.25;
 float kDD = -0.32;
 float vp = 0;
@@ -22,26 +22,30 @@ float position = 0;
 float degrees = 0;
 float pyOutput = 0;
 
+
 void setup()
 {
   Serial.begin(115200);
   Serial.setTimeout(1);
+
   // Initialising Pins  and Interrupts
   pinSetup();
   // Getting intitial values
     position = analogRead(SENSE_1);
-    mappedPos = map(position, 93, 976, -865, 865);
+    mappedPos = map(position, 93, 976, -785, 785);
     degrees = map(count, 0, 540, 0, 360);
     storedPosition = mappedPos;
 }
 
 void loop(){
+  // Running all of the measurements and control every 5ms to avoid overload
   if(millis() - controlTimer >= 5 ) {
     controlTimer = millis();
     doMeasurements();
     doControl();
     storedPosition = mappedPos;
     readImage();
+    // doPrint();
   }
 
 // Controlling the direction
@@ -59,6 +63,8 @@ void loop(){
   }
 }
 
+
+// Abstracted the control logic to its own function
 void doControl() {
   vp = (desiredPosition - mappedPos)*kP;
   vd = (mappedPos - storedPosition)*kD;
@@ -67,28 +73,25 @@ void doControl() {
   vOut = vp + vd + vdd;
 }
 
+// Abstracting the measuring to its own function
 void doMeasurements() {
   position = analogRead(SENSE_1);
-  mappedPos = map(position, 93, 976, -865, 865);
+  mappedPos = map(position, 150, 980, -865, 865);
   degrees = map(count, 0, 540, 0, 360);
    if(abs(mappedPos - storedPosition) >= 200) {
     mappedPos = storedPosition;
   }
 }
 
+// Abstracting Image Processing to its own function
 void readImage() {
   if(Serial.available()){
-    pyOutput = Serial.readString().toFloat(); 
-    if(pyOutput >= 800) {
-      pyOutput = 800;
-    } 
-    if(pyOutput <= -800) {
-      pyOutput = -800;
-    }
+    pyOutput = Serial.readString().toFloat();
     desiredPosition = pyOutput;
   }
 }
 
+// Print logic for testing
 void doPrint() {
   Serial.print(position);
   Serial.print("     ");
@@ -178,6 +181,7 @@ void motorBackwards(int voltage) {
   analogWrite(ENA, voltage);
 }
 
+// Setting up pins in function to declutter void setup
 void pinSetup() {
   pinMode(IN2, OUTPUT);
   pinMode(IN1, OUTPUT);
